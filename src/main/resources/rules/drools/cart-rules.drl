@@ -1,0 +1,99 @@
+package rules.drools;
+
+import com.example.ruleengine.model.ShoppingCart;
+import com.example.ruleengine.model.CartItem;
+import com.example.ruleengine.model.FreeGift;
+
+// Query to retrieve all free gifts inserted into the Stateful Working Memory
+query "GetFreeGifts"
+    $gift: FreeGift()
+end
+
+// Query to retrieve shopping cart
+query "GetShoppingCart"
+    $cart: ShoppingCart()
+end
+
+// ==============================================================================
+// Rule 1: Bulk Item Category Discount
+// If an item in 'ELECTRONICS' has quantity >= 3, apply $20 discount per item
+// ==============================================================================
+rule "Bulk Electronics Discount"
+    salience 100
+    no-loop true
+    when
+        $cart: ShoppingCart()
+        $item: CartItem(category == "ELECTRONICS", quantity >= 3, discount == 0.0)
+    then
+        double itemDiscount = 20.0 * $item.getQuantity();
+        $item.setDiscount(itemDiscount);
+        $cart.addPromotion("Bulk Electronics Discount (-$" + itemDiscount + " on " + $item.getProductName() + ")");
+        update($item);
+end
+
+// ==============================================================================
+// Rule 2: Book Lover Bundle Discount
+// If an item in 'BOOKS' has quantity >= 5, give 10% discount on that item
+// ==============================================================================
+rule "Book Lover Bundle Discount"
+    salience 90
+    no-loop true
+    when
+        $cart: ShoppingCart()
+        $item: CartItem(category == "BOOKS", quantity >= 5, discount == 0.0)
+    then
+        double itemDiscount = ($item.getUnitPrice() * $item.getQuantity()) * 0.10;
+        $item.setDiscount(itemDiscount);
+        $cart.addPromotion("Book Lover 10% Discount (-$" + itemDiscount + ")");
+        update($item);
+end
+
+// ==============================================================================
+// Rule 3: Cart Totals Calculation
+// Calculates final total from items and applied item discounts.
+// Calling update($cart) alerts the working memory so subsequent rules matching
+// finalTotal (such as gift rules) can activate.
+// ==============================================================================
+rule "Calculate Cart Totals"
+    salience 50
+    no-loop true
+    when
+        $cart: ShoppingCart()
+    then
+        $cart.recalculateTotals();
+        update($cart);
+end
+
+// ==============================================================================
+// Rule 4: High Value Cart Reward (Fact Insertion / Forward Chaining)
+// If cart total after discounts is >= $200, insert a Free Gift into Working Memory
+// ==============================================================================
+rule "Award Premium Free Gift"
+    salience 30
+    no-loop true
+    when
+        $cart: ShoppingCart(finalTotal >= 200.0)
+        not (FreeGift(giftId == "GIFT-PREMIUM-HEADPHONES"))
+    then
+        FreeGift gift = new FreeGift("GIFT-PREMIUM-HEADPHONES", "Wireless Bluetooth Earbuds", "Cart total exceeded $200");
+        insert(gift);
+        $cart.addFreeGift(gift);
+        $cart.addPromotion("Bonus Gift: Wireless Bluetooth Earbuds!");
+end
+
+// ==============================================================================
+// Rule 5: Super Cart Bonus Gift
+// If cart total after discounts is >= $500, insert a second gift
+// ==============================================================================
+rule "Award Super Cart Powerbank"
+    salience 20
+    no-loop true
+    when
+        $cart: ShoppingCart(finalTotal >= 500.0)
+        not (FreeGift(giftId == "GIFT-POWERBANK-20K"))
+    then
+        FreeGift gift = new FreeGift("GIFT-POWERBANK-20K", "20000mAh Fast Charging Powerbank", "Cart total exceeded $500");
+        insert(gift);
+        $cart.addFreeGift(gift);
+        $cart.addPromotion("Bonus Gift: 20,000mAh Fast Charging Powerbank!");
+end

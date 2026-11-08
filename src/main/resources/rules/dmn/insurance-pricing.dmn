@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20211108/MODEL/"
+             id="_insurance_pricing_definitions"
+             name="InsurancePricing"
+             namespace="https://example.com/dmn/insurance-pricing">
+
+  <itemDefinition id="_it_driver_age" name="tDriverAge">
+    <typeRef>number</typeRef>
+  </itemDefinition>
+  <itemDefinition id="_it_accident_count" name="tAccidentCount">
+    <typeRef>number</typeRef>
+  </itemDefinition>
+  <itemDefinition id="_it_vehicle_type" name="tVehicleType">
+    <typeRef>string</typeRef>
+  </itemDefinition>
+
+  <itemDefinition id="_it_insurance_decision" name="tInsuranceQuoteDecision">
+    <itemComponent id="_it_iq_eligible" name="eligible">
+      <typeRef>boolean</typeRef>
+    </itemComponent>
+    <itemComponent id="_it_iq_base_premium" name="basePremium">
+      <typeRef>number</typeRef>
+    </itemComponent>
+    <itemComponent id="_it_iq_risk_multiplier" name="riskMultiplier">
+      <typeRef>number</typeRef>
+    </itemComponent>
+    <itemComponent id="_it_iq_final_premium" name="finalPremium">
+      <typeRef>number</typeRef>
+    </itemComponent>
+    <itemComponent id="_it_iq_risk_category" name="riskCategory">
+      <typeRef>string</typeRef>
+    </itemComponent>
+    <itemComponent id="_it_iq_explanation" name="explanation">
+      <typeRef>string</typeRef>
+    </itemComponent>
+  </itemDefinition>
+
+  <inputData id="_id_driver_age" name="driverAge">
+    <variable id="_var_driver_age" name="driverAge" typeRef="tDriverAge"/>
+  </inputData>
+  <inputData id="_id_accident_count" name="accidentCount">
+    <variable id="_var_accident_count" name="accidentCount" typeRef="tAccidentCount"/>
+  </inputData>
+  <inputData id="_id_vehicle_type" name="vehicleType">
+    <variable id="_var_vehicle_type" name="vehicleType" typeRef="tVehicleType"/>
+  </inputData>
+
+  <decision id="_decision_insurance_quote" name="Insurance Quote Decision">
+    <variable id="_var_insurance_quote" name="Insurance Quote Decision" typeRef="tInsuranceQuoteDecision"/>
+    <informationRequirement id="_ir_driver_age">
+      <requiredInput href="#_id_driver_age"/>
+    </informationRequirement>
+    <informationRequirement id="_ir_accident_count">
+      <requiredInput href="#_id_accident_count"/>
+    </informationRequirement>
+    <informationRequirement id="_ir_vehicle_type">
+      <requiredInput href="#_id_vehicle_type"/>
+    </informationRequirement>
+
+    <decisionTable id="_dt_insurance_quote" hitPolicy="FIRST" typeRef="tInsuranceQuoteDecision">
+      <input id="_dt_in_driver_age" label="Driver Age">
+        <inputExpression id="_dt_ie_driver_age" typeRef="number">
+          <text>driverAge</text>
+        </inputExpression>
+      </input>
+      <input id="_dt_in_accident_count" label="Accident Count">
+        <inputExpression id="_dt_ie_accident_count" typeRef="number">
+          <text>accidentCount</text>
+        </inputExpression>
+      </input>
+      <input id="_dt_in_vehicle_type" label="Vehicle Type">
+        <inputExpression id="_dt_ie_vehicle_type" typeRef="string">
+          <text>vehicleType</text>
+        </inputExpression>
+      </input>
+
+      <output id="_dt_out_eligible" name="eligible" typeRef="boolean"/>
+      <output id="_dt_out_base_premium" name="basePremium" typeRef="number"/>
+      <output id="_dt_out_risk_multiplier" name="riskMultiplier" typeRef="number"/>
+      <output id="_dt_out_final_premium" name="finalPremium" typeRef="number"/>
+      <output id="_dt_out_risk_category" name="riskCategory" typeRef="string"/>
+      <output id="_dt_out_explanation" name="explanation" typeRef="string"/>
+
+      <!-- Rule 1: High risk accident history (>= 3 accidents) -->
+      <rule id="_ins_r1">
+        <inputEntry id="_ins_r1_1"><text>-</text></inputEntry>
+        <inputEntry id="_ins_r1_2"><text>&gt;= 3</text></inputEntry>
+        <inputEntry id="_ins_r1_3"><text>-</text></inputEntry>
+        <outputEntry id="_ins_r1_out1"><text>false</text></outputEntry>
+        <outputEntry id="_ins_r1_out2"><text>0</text></outputEntry>
+        <outputEntry id="_ins_r1_out3"><text>0.0</text></outputEntry>
+        <outputEntry id="_ins_r1_out4"><text>0</text></outputEntry>
+        <outputEntry id="_ins_r1_out5"><text>"INELIGIBLE"</text></outputEntry>
+        <outputEntry id="_ins_r1_out6"><text>"Too many past accidents (&gt;= 3). Not eligible for standard insurance."</text></outputEntry>
+      </rule>
+
+      <!-- Rule 2: Young Driver with Sports/Luxury Vehicle -->
+      <rule id="_ins_r2">
+        <inputEntry id="_ins_r2_1"><text>&lt; 25</text></inputEntry>
+        <inputEntry id="_ins_r2_2"><text>&lt; 3</text></inputEntry>
+        <inputEntry id="_ins_r2_3"><text>"SPORTS", "LUXURY"</text></inputEntry>
+        <outputEntry id="_ins_r2_out1"><text>true</text></outputEntry>
+        <outputEntry id="_ins_r2_out2"><text>1200</text></outputEntry>
+        <outputEntry id="_ins_r2_out3"><text>1.8</text></outputEntry>
+        <outputEntry id="_ins_r2_out4"><text>2160</text></outputEntry>
+        <outputEntry id="_ins_r2_out5"><text>"HIGH_RISK"</text></outputEntry>
+        <outputEntry id="_ins_r2_out6"><text>"Young driver premium surcharge with high performance vehicle."</text></outputEntry>
+      </rule>
+
+      <!-- Rule 3: Young Driver with Standard Vehicle (Sedan/SUV) -->
+      <rule id="_ins_r3">
+        <inputEntry id="_ins_r3_1"><text>&lt; 25</text></inputEntry>
+        <inputEntry id="_ins_r3_2"><text>0</text></inputEntry>
+        <inputEntry id="_ins_r3_3"><text>"SEDAN", "SUV"</text></inputEntry>
+        <outputEntry id="_ins_r3_out1"><text>true</text></outputEntry>
+        <outputEntry id="_ins_r3_out2"><text>800</text></outputEntry>
+        <outputEntry id="_ins_r3_out3"><text>1.3</text></outputEntry>
+        <outputEntry id="_ins_r3_out4"><text>1040</text></outputEntry>
+        <outputEntry id="_ins_r3_out5"><text>"MEDIUM_RISK"</text></outputEntry>
+        <outputEntry id="_ins_r3_out6"><text>"Young driver with clean driving record."</text></outputEntry>
+      </rule>
+
+      <!-- Rule 4: Mature Experienced Driver with Clean Record -->
+      <rule id="_ins_r4">
+        <inputEntry id="_ins_r4_1"><text>&gt;= 25</text></inputEntry>
+        <inputEntry id="_ins_r4_2"><text>0</text></inputEntry>
+        <inputEntry id="_ins_r4_3"><text>-</text></inputEntry>
+        <outputEntry id="_ins_r4_out1"><text>true</text></outputEntry>
+        <outputEntry id="_ins_r4_out2"><text>600</text></outputEntry>
+        <outputEntry id="_ins_r4_out3"><text>1.0</text></outputEntry>
+        <outputEntry id="_ins_r4_out4"><text>600</text></outputEntry>
+        <outputEntry id="_ins_r4_out5"><text>"LOW_RISK"</text></outputEntry>
+        <outputEntry id="_ins_r4_out6"><text>"Experienced driver with spotless record - preferred rate."</text></outputEntry>
+      </rule>
+
+      <!-- Rule 5: Fallback Standard -->
+      <rule id="_ins_r5">
+        <inputEntry id="_ins_r5_1"><text>-</text></inputEntry>
+        <inputEntry id="_ins_r5_2"><text>-</text></inputEntry>
+        <inputEntry id="_ins_r5_3"><text>-</text></inputEntry>
+        <outputEntry id="_ins_r5_out1"><text>true</text></outputEntry>
+        <outputEntry id="_ins_r5_out2"><text>750</text></outputEntry>
+        <outputEntry id="_ins_r5_out3"><text>1.25</text></outputEntry>
+        <outputEntry id="_ins_r5_out4"><text>937.5</text></outputEntry>
+        <outputEntry id="_ins_r5_out5"><text>"STANDARD_RISK"</text></outputEntry>
+        <outputEntry id="_ins_r5_out6"><text>"Standard policy based on vehicle category and history."</text></outputEntry>
+      </rule>
+
+    </decisionTable>
+  </decision>
+
+</definitions>

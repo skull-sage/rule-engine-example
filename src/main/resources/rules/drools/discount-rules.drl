@@ -1,0 +1,113 @@
+package rules.drools;
+
+import com.example.ruleengine.model.Customer;
+import com.example.ruleengine.model.Order;
+import com.example.ruleengine.model.Discount;
+
+// ==============================================================================
+// Rule 1: Platinum Tier VIP Discount (Salience 100 - Highest Priority)
+// Platinum customers get 25% discount and free shipping on any order over $100.
+// Notice the 'activation-group': once a winning discount rule fires, lower
+// priority rules in the same activation group are automatically cancelled.
+// ==============================================================================
+rule "Platinum Tier VIP Discount"
+    salience 100
+    activation-group "order-discount"
+    when
+        $order: Order(
+            orderAmount >= 100.0,
+            customer != null,
+            customer.loyaltyTier == "PLATINUM"
+        )
+    then
+        $order.getDiscount().setPercentage(25.0);
+        $order.getDiscount().setDiscountAmount($order.getOrderAmount() * 0.25);
+        $order.getDiscount().setLoyaltyPointsAwarded((int)($order.getOrderAmount() * 2));
+        $order.getDiscount().setFreeShipping(true);
+        $order.getDiscount().setDescription("Platinum VIP: 25% off + Free Shipping + 2x Points");
+        $order.addAppliedRule(drools.getRule().getName());
+end
+
+// ==============================================================================
+// Rule 2: Gold Tier Standard Discount (Salience 80)
+// Gold customers get 15% discount on orders >= $100
+// ==============================================================================
+rule "Gold Tier Discount"
+    salience 80
+    activation-group "order-discount"
+    when
+        $order: Order(
+            orderAmount >= 100.0,
+            customer != null,
+            customer.loyaltyTier == "GOLD"
+        )
+    then
+        $order.getDiscount().setPercentage(15.0);
+        $order.getDiscount().setDiscountAmount($order.getOrderAmount() * 0.15);
+        $order.getDiscount().setLoyaltyPointsAwarded((int)($order.getOrderAmount() * 1.5));
+        $order.getDiscount().setFreeShipping(true);
+        $order.getDiscount().setDescription("Gold Tier: 15% off + Free Shipping");
+        $order.addAppliedRule(drools.getRule().getName());
+end
+
+// ==============================================================================
+// Rule 3: Silver Tier Discount (Salience 60)
+// Silver customers get 10% discount on orders >= $50
+// ==============================================================================
+rule "Silver Tier Discount"
+    salience 60
+    activation-group "order-discount"
+    when
+        $order: Order(
+            orderAmount >= 50.0,
+            customer != null,
+            customer.loyaltyTier == "SILVER"
+        )
+    then
+        $order.getDiscount().setPercentage(10.0);
+        $order.getDiscount().setDiscountAmount($order.getOrderAmount() * 0.10);
+        $order.getDiscount().setLoyaltyPointsAwarded((int)($order.getOrderAmount() * 1.0));
+        $order.getDiscount().setFreeShipping(false);
+        $order.getDiscount().setDescription("Silver Tier: 10% off");
+        $order.addAppliedRule(drools.getRule().getName());
+end
+
+// ==============================================================================
+// Rule 4: Regular Tier Bulk Purchase Bonus (Salience 40)
+// Regular tier customers get 5% discount if order exceeds $150
+// ==============================================================================
+rule "Regular Tier Bulk Purchase Bonus"
+    salience 40
+    activation-group "order-discount"
+    when
+        $order: Order(
+            orderAmount >= 150.0,
+            customer != null,
+            customer.loyaltyTier == "REGULAR"
+        )
+    then
+        $order.getDiscount().setPercentage(5.0);
+        $order.getDiscount().setDiscountAmount($order.getOrderAmount() * 0.05);
+        $order.getDiscount().setLoyaltyPointsAwarded((int)($order.getOrderAmount() * 0.5));
+        $order.getDiscount().setFreeShipping(false);
+        $order.getDiscount().setDescription("Regular Bulk: 5% off for orders over $150");
+        $order.addAppliedRule(drools.getRule().getName());
+end
+
+// ==============================================================================
+// Rule 5: Default Fallback - Standard Points Only (Salience 10 - Lowest Priority)
+// Only fires if no higher priority rule in the activation group has fired.
+// ==============================================================================
+rule "Default Standard Points"
+    salience 10
+    activation-group "order-discount"
+    when
+        $order: Order()
+    then
+        $order.getDiscount().setPercentage(0.0);
+        $order.getDiscount().setDiscountAmount(0.0);
+        $order.getDiscount().setLoyaltyPointsAwarded((int)($order.getOrderAmount() * 0.1));
+        $order.getDiscount().setFreeShipping(false);
+        $order.getDiscount().setDescription("Standard: Base loyalty points only");
+        $order.addAppliedRule(drools.getRule().getName());
+end

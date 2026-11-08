@@ -25,3 +25,4 @@ public class DroolsStatelessController {
         return ResponseEntity.ok(summary);
     }
 }
+

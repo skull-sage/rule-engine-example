@@ -120,3 +120,4 @@ public class ShoppingCart {
         this.finalTotal = Math.max(0.0, originalTotal - discountTotal);
     }
 }
+

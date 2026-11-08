@@ -68,3 +68,4 @@ public class LoanDecision {
         this.reasons.add(reason);
     }
 }
+

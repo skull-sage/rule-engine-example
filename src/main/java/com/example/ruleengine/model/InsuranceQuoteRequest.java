@@ -48,3 +48,4 @@ public class InsuranceQuoteRequest {
         this.vehicleType = vehicleType;
     }
 }
+

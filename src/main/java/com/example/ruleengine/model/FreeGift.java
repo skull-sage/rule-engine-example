@@ -38,3 +38,4 @@ public class FreeGift {
         this.qualifyingReason = qualifyingReason;
     }
 }
+

@@ -94,3 +94,4 @@ class DmnEvaluationTest {
         assertEquals(0.0, decision.getFinalPremium());
     }
 }
+

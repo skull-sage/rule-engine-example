@@ -83,3 +83,4 @@ class DroolsStatelessTest {
         assertEquals(4, order.getDiscount().getLoyaltyPointsAwarded()); // 0.1x points
     }
 }
+

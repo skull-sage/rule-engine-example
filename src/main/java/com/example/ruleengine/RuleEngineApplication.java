@@ -10,3 +10,4 @@ public class RuleEngineApplication {
         SpringApplication.run(RuleEngineApplication.class, args);
     }
 }
+

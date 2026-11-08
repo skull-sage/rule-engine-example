@@ -81,3 +81,4 @@ public class LoanApplication {
         this.employmentMonths = employmentMonths;
     }
 }
+

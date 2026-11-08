@@ -68,3 +68,4 @@ public class InsuranceQuoteDecision {
         this.explanation = explanation;
     }
 }
+

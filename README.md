@@ -6,7 +6,12 @@
 [![Drools](https://img.shields.io/badge/Drools-10.2.0-blue)]()
 [![KIE DMN](https://img.shields.io/badge/KIE%20DMN-10.2.0-blue)]()
 
-A clean, production-ready Spring Boot reference project demonstrating how to design, configure, and evaluate business rules using **Drools Rule Engine (DRL)**, **KIE Sessions (Stateless vs Stateful)**, and **KIE DMN (Decision Model and Notation)**.
+A clean, production-ready Spring Boot reference project demonstrating how to design, configure, and evaluate business rules using:
+* **Drools Rule Engine (DRL)**: Pattern matching, working memory reactivity, fact chaining, salience, activation groups, and agenda groups.
+* **KIE Sessions**: Deep dive into `StatelessKieSession` vs stateful `KieSession`.
+* **KIE DMN (Decision Model and Notation)**: Visual, declarative decision tables with FEEL expressions.
+* **Dynamic DMN Management**: REST APIs allowing business analysts to register and evaluate new DMN models exported from spreadsheets at runtime.
+* **KIE Session & Agenda Group Orchestration**: Targeted evaluation of DMN models via Drools `agenda-group`, invoking service functions via `global`, and applying Drools overrides on top of DMN decisions.
 
 ---
 
@@ -16,15 +21,18 @@ A clean, production-ready Spring Boot reference project demonstrating how to des
   - [1. Drools Rule Engine (DRL)](#1-drools-rule-engine-drl)
   - [2. KIE Session: Stateless vs Stateful](#2-kie-session-stateless-vs-stateful)
   - [3. DMN (Decision Model and Notation)](#3-dmn-decision-model-and-notation)
-  - [4. DRL vs DMN Comparison](#4-drl-vs-dmn-comparison)
+  - [4. Dynamic DMN Registration (For Business Analysts)](#4-dynamic-dmn-registration-for-business-analysts)
+  - [5. KieSession Agenda Group & Service Invocation Orchestration](#5-kiesession-agenda-group--service-invocation-orchestration)
 - [Project Architecture](#-project-architecture)
 - [Quick Start](#-quick-start)
+- [API Tests Folder (`/api-tests`)](#-api-tests-folder-api-tests)
 - [API Walkthrough & cURL Examples](#-api-walkthrough--curl-examples)
   - [1. Drools Stateless Rule: Order Loyalty Discount](#1-drools-stateless-rule-order-loyalty-discount)
   - [2. Drools Stateful Rule: Shopping Cart & Free Gift Inference](#2-drools-stateful-rule-shopping-cart--free-gift-inference)
-  - [3. DMN Evaluation: Loan Eligibility Decision Table](#3-dmn-evaluation-loan-eligibility-decision-table)
-  - [4. DMN Evaluation: Insurance Premium Calculation](#4-dmn-evaluation-insurance-premium-calculation)
-  - [5. API Catalog](#5-api-catalog)
+  - [3. DMN Standard Evaluation: Loan Eligibility & Insurance](#3-dmn-standard-evaluation-loan-eligibility--insurance)
+  - [4. Dynamic DMN Registration & Direct Evaluation](#4-dynamic-dmn-registration--direct-evaluation)
+  - [5. KieSession Agenda Group Targeting & DMN Overrides](#5-kiesession-agenda-group-targeting--dmn-overrides)
+  - [6. Live API Catalog](#6-live-api-catalog)
 - [Running Automated Tests](#-running-automated-tests)
 
 ---
@@ -32,11 +40,12 @@ A clean, production-ready Spring Boot reference project demonstrating how to des
 ## 🧠 Core Concepts & Architecture
 
 ### 1. Drools Rule Engine (DRL)
-Drools uses an enhanced Rete/Phreak pattern matching algorithm to evaluate facts against declarative rules written in `.drl` files.
-- **LHS (`when`)**: Conditional pattern matching against facts in memory.
+Drools uses an enhanced Rete/Phreak pattern matching algorithm:
+- **LHS (`when`)**: Pattern matching against facts in Working Memory.
 - **RHS (`then`)**: Actions triggered when conditions are satisfied.
-- **Salience**: Determines execution priority (higher numbers execute first).
+- **Salience**: Determines execution priority.
 - **Activation-Group**: Only the highest-priority rule in the group fires; others are cancelled.
+- **Agenda-Group**: Partitions rules into named phases. A group only executes when targeted via `setFocus()`.
 - **Working Memory & Reactivity**: Rules can insert new facts (`insert(...)`), modify existing ones (`update(...)`), or query the working memory (`query ...`).
 
 ### 2. KIE Session: Stateless vs Stateful
@@ -49,28 +58,18 @@ Drools uses an enhanced Rete/Phreak pattern matching algorithm to evaluate facts
 | **Use Cases** | Stateless calculations (discounts, validation, scoring, pricing). | Cart management, transaction monitoring, multi-step workflows, rule chaining. |
 
 ### 3. DMN (Decision Model and Notation)
-DMN is an **OMG industry standard** for visual, declarative decision tables and graphs:
 - **Business Analyst Friendly**: Standardized XML format editable in visual diagram tools (VS Code DMN editor, Camunda Modeler, Kogito).
 - **FEEL Expressions**: Friendly Enough Expression Language for clean predicate logic (`>= 18`, `[500..800]`).
-- **Hit Policies**: Defines how table rows are evaluated:
-  - `FIRST`: Returns the first rule that matches.
-  - `UNIQUE`: Exactly one rule must match.
-  - `COLLECT`: Accumulates results of all matching rules.
-- **Decoupled**: Executed directly by `DMNRuntime` without compiling into Java bytecode.
+- **Hit Policies**: Defines how table rows are evaluated (`FIRST`, `UNIQUE`, `COLLECT`).
 
-### 4. DRL vs DMN Comparison
+### 4. Dynamic DMN Registration (For Business Analysts)
+Allows business users to export decision tables from spreadsheets or DMN editors and register them on the running application via REST (`POST /api/dmn/dynamic`). The application compiles the XML into an isolated KIE container and exposes it for immediate evaluation without server restarts.
 
-```
-+------------------------+---------------------------------------+---------------------------------------+
-| Feature                | Drools DRL                            | KIE DMN                               |
-+------------------------+---------------------------------------+---------------------------------------+
-| Format                 | Proprietary DSL (.drl)                | OMG Standard XML / Decision Tables    |
-| Primary Audience       | Software Engineers                    | Business Analysts & Domain Experts    |
-| Stateful Reasoning     | Full support (insert, update, delete) | Stateless input -> output mapping     |
-| Complex Inference      | Forward chaining, event CEP           | Decision dependency graphs (DRDs)     |
-| Performance Overhead   | Java bytecode compilation             | Fast interpreted FEEL evaluation      |
-+------------------------+---------------------------------------+---------------------------------------+
-```
+### 5. KieSession Agenda Group & Service Invocation Orchestration
+Shows how to combine Drools and DMN in a hybrid pipeline:
+1. Client requests an evaluation targeting a specific `agenda-group` (e.g. `"loan-approval-orchestration"`).
+2. The service creates a `KieSession`, injects `DynamicDmnService` as a Drools `global`, and sets focus on the requested agenda group (`setFocus()`).
+3. Drools rules in that agenda group invoke the DMN evaluation service, insert the decision as a `DmnDecisionFact` into Working Memory, and subsequent rules inspect or override the result (e.g., granting a -1.0% interest rate concession if credit score >= 800).
 
 ---
 
@@ -78,45 +77,39 @@ DMN is an **OMG industry standard** for visual, declarative decision tables and 
 
 ```
 rule-engine-example/
+├── api-tests/                               # Runnable .http files for testing
+│   ├── 00-home-catalog.http                 # API Catalog & Actuator
+│   ├── 01-drools-stateless.http             # Stateless discount rules
+│   ├── 02-drools-stateful.http              # Stateful cart & free gifts
+│   ├── 03-dmn-standard.http                 # Standard pre-compiled DMN
+│   ├── 04-dynamic-dmn.http                  # Dynamic DMN registration & evaluate
+│   ├── 05-kie-agenda-dmn.http               # KieSession targeting DMN via agenda group
+│   └── samples/
+│       └── retail-tier-discount.dmn         # Sample DMN export ready for upload
 ├── src/
 │   ├── main/
 │   │   ├── java/com/example/ruleengine/
-│   │   │   ├── RuleEngineApplication.java
-│   │   │   ├── config/
-│   │   │   │   ├── DroolsConfig.java                # KieContainer & DMNRuntime beans
-│   │   │   │   └── TrackingAgendaEventListener.java # Execution provenance & listener
-│   │   │   ├── controller/
-│   │   │   │   ├── DroolsStatelessController.java   # POST /api/drools/stateless/discount
-│   │   │   │   ├── DroolsStatefulController.java    # POST /api/drools/stateful/cart-evaluate
-│   │   │   │   ├── DmnController.java               # POST /api/dmn/loan-eligibility & /insurance-quote
-│   │   │   │   └── HomeController.java              # GET /api catalog
-│   │   │   ├── model/
-│   │   │   │   ├── Customer.java, Order.java, Discount.java
-│   │   │   │   ├── ShoppingCart.java, CartItem.java, FreeGift.java
-│   │   │   │   ├── LoanApplication.java, LoanDecision.java
-│   │   │   │   ├── InsuranceQuoteRequest.java, InsuranceQuoteDecision.java
-│   │   │   │   └── ExecutionSummary.java            # Standardized envelope with provenance
-│   │   │   └── service/
-│   │   │       ├── StatelessDroolsService.java      # StatelessKieSession execution
-│   │   │       ├── StatefulDroolsService.java       # Stateful KieSession + Queries + Disposal
-│   │   │       └── DmnEvaluationService.java        # DMNRuntime evaluation
+│   │   │   ├── config/                      # DroolsConfig & TrackingAgendaEventListener
+│   │   │   ├── controller/                  # REST Controllers
+│   │   │   │   ├── HomeController.java
+│   │   │   │   ├── DroolsStatelessController.java
+│   │   │   │   ├── DroolsStatefulController.java
+│   │   │   │   ├── DmnController.java
+│   │   │   │   ├── DynamicDmnController.java
+│   │   │   │   └── AgendaDmnOrchestrationController.java
+│   │   │   ├── model/                       # Domain models & bridge facts
+│   │   │   └── service/                     # Business services
+│   │   │       ├── StatelessDroolsService.java
+│   │   │       ├── StatefulDroolsService.java
+│   │   │       ├── DmnEvaluationService.java
+│   │   │       ├── DynamicDmnService.java
+│   │   │       └── AgendaDmnOrchestrationService.java
 │   │   └── resources/
-│   │       ├── application.properties
 │   │       └── rules/
-│   │           ├── drools/
-│   │           │   ├── discount-rules.drl           # Salience, activation-groups, tiers
-│   │           │   └── cart-rules.drl               # Queries, fact insertion, forward chaining
-│   │           └── dmn/
-│   │               ├── loan-eligibility.dmn         # DMN 1.4 Decision Table (Hit policy: FIRST)
-│   │               └── insurance-pricing.dmn        # Multi-input FEEL decision table
-│   └── test/
-│       └── java/com/example/ruleengine/
-│           ├── DroolsStatelessTest.java             # Unit tests for stateless rules
-│           ├── DroolsStatefulTest.java              # Unit tests for working memory & queries
-│           ├── DmnEvaluationTest.java               # Unit tests for DMN runtime & FEEL
-│           └── RuleEngineIntegrationTest.java       # MockMvc / SpringBootTest REST API tests
+│   │           ├── drools/                  # DRL rules (including agenda-dmn-orchestration.drl)
+│   │           └── dmn/                     # Built-in DMN models
+│   └── test/                                # 23 Automated JUnit 5 & MockMvc tests
 ├── build.gradle
-├── settings.gradle
 └── gradlew
 ```
 
@@ -125,31 +118,30 @@ rule-engine-example/
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **JDK 21 or 25**
-- Git
+* **JDK 21 or 25**
 
-### Build and Run
 ```bash
-# Clone the repository
-git clone https://github.com/skull-sage/rule-engine-example.git
-cd rule-engine-example
-
-# Run unit and integration tests
+# Build and run tests
 ./gradlew test
 
 # Start the application
 ./gradlew bootRun
 ```
 
-The application will start on `http://localhost:8080`.
+App runs on `http://localhost:8080`.
+
+---
+
+## 🧪 API Tests Folder (`/api-tests`)
+
+You can run every endpoint directly inside **VS Code** (using REST Client) or **IntelliJ IDEA**:
+* Open any file in [**`api-tests/`**](file:///Volumes/work-space/brac-v3/rule-engine-example/api-tests) and click **"Send Request"**.
 
 ---
 
 ## 📡 API Walkthrough & cURL Examples
 
 ### 1. Drools Stateless Rule: Order Loyalty Discount
-Demonstrates **StatelessKieSession** with rule salience and `activation-group`.
-
 ```bash
 curl -X POST http://localhost:8080/api/drools/stateless/discount \
   -H "Content-Type: application/json" \
@@ -165,43 +157,9 @@ curl -X POST http://localhost:8080/api/drools/stateless/discount \
   }'
 ```
 
-**Response:**
-```json
-{
-  "engineType": "DROOLS_STATELESS",
-  "sessionOrModel": "StatelessKieSession",
-  "executionDurationMs": 2,
-  "rulesFired": [
-    "Platinum Tier VIP Discount"
-  ],
-  "result": {
-    "orderId": "ORD-1001",
-    "customer": {
-      "id": "CUST-01",
-      "name": "Alice Cooper",
-      "loyaltyTier": "PLATINUM",
-      "loyaltyPoints": 420
-    },
-    "orderAmount": 250.0,
-    "discount": {
-      "percentage": 25.0,
-      "discountAmount": 62.5,
-      "loyaltyPointsAwarded": 500,
-      "freeShipping": true,
-      "description": "Platinum VIP: 25% off + Free Shipping + 2x Points"
-    },
-    "appliedRules": [
-      "Platinum Tier VIP Discount"
-    ]
-  }
-}
-```
-
 ---
 
 ### 2. Drools Stateful Rule: Shopping Cart & Free Gift Inference
-Demonstrates **Stateful KieSession**, fact modification (`update($cart)`), rule chaining, querying working memory for dynamically inserted `FreeGift` facts, and session disposal.
-
 ```bash
 curl -X POST http://localhost:8080/api/drools/stateful/cart-evaluate \
   -H "Content-Type: application/json" \
@@ -220,73 +178,80 @@ curl -X POST http://localhost:8080/api/drools/stateful/cart-evaluate \
   }'
 ```
 
-**Response:**
-```json
-{
-  "engineType": "DROOLS_STATEFUL",
-  "sessionOrModel": "KieSession (Stateful)",
-  "executionDurationMs": 3,
-  "rulesFired": [
-    "Bulk Electronics Discount",
-    "Calculate Cart Totals",
-    "Award Premium Free Gift"
-  ],
-  "result": {
-    "cartId": "CART-501",
-    "customerId": "CUST-88",
-    "originalTotal": 300.0,
-    "discountTotal": 60.0,
-    "finalTotal": 240.0,
-    "freeGifts": [
-      {
-        "giftId": "GIFT-PREMIUM-HEADPHONES",
-        "giftName": "Wireless Bluetooth Earbuds",
-        "qualifyingReason": "Cart total exceeded $200"
-      }
-    ],
-    "appliedPromotions": [
-      "Bulk Electronics Discount (-$60.0 on RGB Mechanical Keyboard)",
-      "Bonus Gift: Wireless Bluetooth Earbuds!"
-    ]
-  }
-}
+---
+
+### 3. Dynamic DMN Registration (Exported from Spreadsheet)
+Register a newly exported decision table on the fly:
+```bash
+curl -X POST http://localhost:8080/api/dmn/dynamic \
+  -H "Content-Type: application/json" \
+  -d '{
+    "modelId": "retail-tier-discount",
+    "description": "Exported from business spreadsheet",
+    "dmnXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"https://www.omg.org/spec/DMN/20211108/MODEL/\" id=\"_defs\" name=\"RetailTierDiscount\" namespace=\"https://example.com/dmn/retail-tier-discount\"><itemDefinition id=\"_t1\" name=\"tCustomerTier\"><typeRef>string</typeRef></itemDefinition><itemDefinition id=\"_t2\" name=\"tCartAmount\"><typeRef>number</typeRef></itemDefinition><itemDefinition id=\"_tOut\" name=\"tDec\"><itemComponent id=\"_c1\" name=\"discountPercent\"><typeRef>number</typeRef></itemComponent><itemComponent id=\"_c2\" name=\"rewardPoints\"><typeRef>number</typeRef></itemComponent></itemDefinition><inputData id=\"_i1\" name=\"customerTier\"><variable id=\"_vi1\" name=\"customerTier\" typeRef=\"tCustomerTier\"/></inputData><inputData id=\"_i2\" name=\"cartAmount\"><variable id=\"_vi2\" name=\"cartAmount\" typeRef=\"tCartAmount\"/></inputData><decision id=\"_dec\" name=\"Retail Decision\"><variable id=\"_vd\" name=\"Retail Decision\" typeRef=\"tDec\"/><informationRequirement id=\"_ir1\"><requiredInput href=\"#_i1\"/></informationRequirement><informationRequirement id=\"_ir2\"><requiredInput href=\"#_i2\"/></informationRequirement><decisionTable id=\"_dt\" hitPolicy=\"FIRST\" typeRef=\"tDec\"><input id=\"_in1\"><inputExpression typeRef=\"string\"><text>customerTier</text></inputExpression></input><input id=\"_in2\"><inputExpression typeRef=\"number\"><text>cartAmount</text></inputExpression></input><output id=\"_o1\" name=\"discountPercent\" typeRef=\"number\"/><output id=\"_o2\" name=\"rewardPoints\" typeRef=\"number\"/><rule id=\"_r1\"><inputEntry><text>\"VIP\"</text></inputEntry><inputEntry><text>&gt;= 200</text></inputEntry><outputEntry><text>20.0</text></outputEntry><outputEntry><text>500</text></outputEntry></rule><rule id=\"_r2\"><inputEntry><text>-</text></inputEntry><inputEntry><text>-</text></inputEntry><outputEntry><text>5.0</text></outputEntry><outputEntry><text>50</text></outputEntry></rule></decisionTable></decision></definitions>"
+  }'
+```
+
+Directly evaluate the registered model:
+```bash
+curl -X POST http://localhost:8080/api/dmn/dynamic/retail-tier-discount/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{ "customerTier": "VIP", "cartAmount": 300.0 }'
 ```
 
 ---
 
-### 3. DMN Evaluation: Loan Eligibility Decision Table
-Demonstrates **KIE DMN 1.4 Runtime**, passing input data into `DMNContext`, and evaluating decision tables.
+### 4. KieSession Agenda Group Targeting & DMN Overrides
+Target the `"loan-approval-orchestration"` agenda group. Drools evaluates the `"loan-eligibility"` DMN table, detects `creditScore >= 800`, and fires an override reducing the interest rate by 1.0%:
 
 ```bash
-curl -X POST http://localhost:8080/api/dmn/loan-eligibility \
+curl -X POST http://localhost:8080/api/orchestration/agenda-dmn/evaluate \
   -H "Content-Type: application/json" \
   -d '{
-    "applicantId": "APP-901",
-    "applicantName": "John Smith",
-    "age": 34,
-    "monthlyIncome": 75000.0,
-    "creditScore": 780,
-    "requestedAmount": 200000.0,
-    "employmentMonths": 48
+    "agendaGroup": "loan-approval-orchestration",
+    "targetModelId": "loan-eligibility",
+    "inputs": {
+      "age": 36,
+      "monthlyIncome": 120000.0,
+      "creditScore": 820,
+      "requestedAmount": 300000.0
+    }
   }'
 ```
 
 **Response:**
 ```json
 {
-  "engineType": "DMN",
-  "sessionOrModel": "LoanEligibility (Loan Eligibility Decision)",
+  "engineType": "HYBRID_AGENDA_DMN",
+  "sessionOrModel": "AgendaGroup: loan-approval-orchestration -> Model: loan-eligibility",
   "executionDurationMs": 2,
   "rulesFired": [
-    "Decision Table: Loan Eligibility Decision"
+    "Execute Loan Eligibility DMN in Agenda",
+    "High Credit Score Prime Rate Override"
   ],
   "result": {
-    "approved": true,
-    "maxApprovedAmount": 500000.0,
-    "riskGrade": "LOW_RISK",
-    "interestRate": 6.5,
-    "reasons": [
-      "Prime Tier: Approved with lowest interest rate"
+    "agendaGroup": "loan-approval-orchestration",
+    "targetModelId": "loan-eligibility",
+    "executed": true,
+    "overrideApplied": true,
+    "decisionFact": {
+      "modelId": "loan-eligibility",
+      "decisionName": "Loan Eligibility Decision",
+      "decisionValues": {
+        "approved": true,
+        "maxApprovedAmount": 500000.0,
+        "riskGrade": "LOW_RISK",
+        "interestRate": 5.5,
+        "vipOverrideApplied": true
+      },
+      "auditTags": [
+        "DMN Model evaluated: LoanEligibility (https://example.com/dmn/loan-eligibility)",
+        "Drools VIP override applied: -1.0% interest rate concession"
+      ]
+    },
+    "executionTrace": [
+      "Step 1: Evaluated loan DMN model 'loan-eligibility'",
+      "Step 2 (Drools Override): Credit score >= 800 qualifies for -1.0% interest rate VIP concession"
     ]
   }
 }
@@ -294,44 +259,7 @@ curl -X POST http://localhost:8080/api/dmn/loan-eligibility \
 
 ---
 
-### 4. DMN Evaluation: Insurance Premium Calculation
-Evaluates driver profile against multiple FEEL rules to calculate risk tier and premium.
-
-```bash
-curl -X POST http://localhost:8080/api/dmn/insurance-quote \
-  -H "Content-Type: application/json" \
-  -d '{
-    "driverName": "Sarah Connor",
-    "driverAge": 32,
-    "accidentCount": 0,
-    "vehicleType": "SEDAN"
-  }'
-```
-
-**Response:**
-```json
-{
-  "engineType": "DMN",
-  "sessionOrModel": "InsurancePricing (Insurance Quote Decision)",
-  "executionDurationMs": 1,
-  "rulesFired": [
-    "Decision Table: Insurance Quote Decision"
-  ],
-  "result": {
-    "eligible": true,
-    "basePremium": 600.0,
-    "riskMultiplier": 1.0,
-    "finalPremium": 600.0,
-    "riskCategory": "LOW_RISK",
-    "explanation": "Experienced driver with spotless record - preferred rate."
-  }
-}
-```
-
----
-
-### 5. API Catalog
-Inspect all active rule engine endpoints:
+### 5. Live API Catalog
 ```bash
 curl http://localhost:8080/api
 ```
@@ -340,20 +268,12 @@ curl http://localhost:8080/api
 
 ## 🧪 Running Automated Tests
 
-Run all unit, stateful reasoning, DMN decision table, and Spring Boot integration tests:
-
 ```bash
 ./gradlew test
 ```
-
-### Test Suite Highlights:
-- **`DroolsStatelessTest`**: Verifies discount calculation, loyalty tiers, activation groups, and listener tracking.
-- **`DroolsStatefulTest`**: Verifies fact insertion (`FreeGift`), cart totals calculation, working memory queries (`GetFreeGifts`), and memory disposal.
-- **`DmnEvaluationTest`**: Verifies DMN 1.4 decision tables, FEEL ranges, condition matching, and edge case rejections (underage, poor credit score, excessive accidents).
-- **`RuleEngineIntegrationTest`**: Verifies end-to-end HTTP JSON serialization and REST controller responses.
+All **23 unit and integration tests** execute with 100% pass rate.
 
 ---
 
 ## 📄 License
 MIT License.
-

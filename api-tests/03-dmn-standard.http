@@ -1,0 +1,97 @@
+### ==============================================================================
+### DmnController: Standard Static DMN Models (Loan & Insurance)
+### Demonstrates: KIE DMN 1.4 Decision Tables (Hit Policy FIRST) and FEEL
+### ==============================================================================
+
+@baseUrl = http://localhost:8080
+
+### 1. Loan Eligibility: Prime Tier Approved (Low Risk, 6.5% Interest)
+POST {{baseUrl}}/api/dmn/loan-eligibility
+Content-Type: application/json
+Accept: application/json
+
+{
+  "applicantId": "APP-100",
+  "applicantName": "John Smith",
+  "age": 34,
+  "monthlyIncome": 75000.0,
+  "creditScore": 780,
+  "requestedAmount": 200000.0,
+  "employmentMonths": 48
+}
+
+###
+
+### 2. Loan Eligibility: Underage Applicant (Declined)
+POST {{baseUrl}}/api/dmn/loan-eligibility
+Content-Type: application/json
+Accept: application/json
+
+{
+  "applicantId": "APP-101",
+  "applicantName": "Minor Applicant",
+  "age": 17,
+  "monthlyIncome": 30000.0,
+  "creditScore": 720,
+  "requestedAmount": 10000.0,
+  "employmentMonths": 12
+}
+
+###
+
+### 3. Loan Eligibility: Low Credit Score (Declined)
+POST {{baseUrl}}/api/dmn/loan-eligibility
+Content-Type: application/json
+Accept: application/json
+
+{
+  "applicantId": "APP-102",
+  "applicantName": "Risk Applicant",
+  "age": 29,
+  "monthlyIncome": 50000.0,
+  "creditScore": 540,
+  "requestedAmount": 30000.0,
+  "employmentMonths": 24
+}
+
+###
+
+### 4. Insurance Pricing: Mature Experienced Driver (Preferred Rate $600)
+POST {{baseUrl}}/api/dmn/insurance-quote
+Content-Type: application/json
+Accept: application/json
+
+{
+  "driverName": "Sarah Connor",
+  "driverAge": 35,
+  "accidentCount": 0,
+  "vehicleType": "SEDAN"
+}
+
+###
+
+### 5. Insurance Pricing: Young Driver with Sports Car (High Risk $2,160)
+POST {{baseUrl}}/api/dmn/insurance-quote
+Content-Type: application/json
+Accept: application/json
+
+{
+  "driverName": "Peter Parker",
+  "driverAge": 22,
+  "accidentCount": 1,
+  "vehicleType": "SPORTS"
+}
+
+###
+
+### 6. Insurance Pricing: Driver with Excessive Accidents (Ineligible)
+POST {{baseUrl}}/api/dmn/insurance-quote
+Content-Type: application/json
+Accept: application/json
+
+{
+  "driverName": "Crash Test",
+  "driverAge": 31,
+  "accidentCount": 4,
+  "vehicleType": "SUV"
+}

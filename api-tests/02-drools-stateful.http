@@ -1,0 +1,71 @@
+### ==============================================================================
+### DroolsStatefulController: Shopping Cart, Quantity Rules & Fact Insertion
+### Demonstrates: Stateful KieSession, Working Memory reactivity (update()),
+###               Dynamic FreeGift fact insertion, Working Memory queries,
+###               and explicit session disposal.
+### ==============================================================================
+
+@baseUrl = http://localhost:8080
+
+### 1. High-Value Electronics Cart: Category Discount + Free Earbuds
+# 3 Keyboards @ $100 = $300. Electronics bulk discount: -$60 ($20/unit).
+# Final total = $240 (>= $200 threshold) -> Triggers dynamic insertion of Free Earbuds!
+POST {{baseUrl}}/api/drools/stateful/cart-evaluate
+Content-Type: application/json
+Accept: application/json
+
+{
+  "cartId": "CART-501",
+  "customerId": "CUST-A",
+  "items": [
+    {
+      "productId": "PROD-KB",
+      "productName": "RGB Mechanical Keyboard",
+      "category": "ELECTRONICS",
+      "unitPrice": 100.0,
+      "quantity": 3
+    }
+  ]
+}
+
+###
+
+### 2. Super Cart: Exceeds $500 -> Triggers BOTH Free Earbuds AND 20k mAh Powerbank!
+POST {{baseUrl}}/api/drools/stateful/cart-evaluate
+Content-Type: application/json
+Accept: application/json
+
+{
+  "cartId": "CART-502",
+  "customerId": "CUST-B",
+  "items": [
+    {
+      "productId": "PROD-MONITOR",
+      "productName": "4K Ultra-Wide Curved Monitor",
+      "category": "ELECTRONICS",
+      "unitPrice": 650.0,
+      "quantity": 1
+    }
+  ]
+}
+
+###
+
+### 3. Book Bundle: 10% Bundle Discount on 5+ Books (Total $90, no gift)
+POST {{baseUrl}}/api/drools/stateful/cart-evaluate
+Content-Type: application/json
+Accept: application/json
+
+{
+  "cartId": "CART-503",
+  "customerId": "CUST-C",
+  "items": [
+    {
+      "productId": "PROD-BOOK-01",
+      "productName": "Domain-Driven Design Reference",
+      "category": "BOOKS",
+      "unitPrice": 20.0,
+      "quantity": 5
+    }
+  ]
+}

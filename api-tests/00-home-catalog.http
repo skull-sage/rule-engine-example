@@ -1,0 +1,21 @@
+### ==============================================================================
+### HomeController: Rule Engine Service Overview & API Catalog
+### ==============================================================================
+
+@baseUrl = http://localhost:8080
+
+### 1. Service Overview & Catalog (Root)
+GET {{baseUrl}}/
+Accept: application/json
+
+###
+
+### 2. Service Overview & Catalog (/api)
+GET {{baseUrl}}/api
+Accept: application/json
+
+###
+
+### 3. Actuator Health
+GET {{baseUrl}}/actuator/health
+Accept: application/json

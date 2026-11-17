@@ -23,7 +23,8 @@ public class DroolsConfig {
 
     private static final String[] DRL_FILES = {
             "rules/drools/discount-rules.drl",
-            "rules/drools/cart-rules.drl"
+            "rules/drools/cart-rules.drl",
+            "rules/drools/agenda-dmn-orchestration.drl"
     };
 
     private static final String[] DMN_FILES = {

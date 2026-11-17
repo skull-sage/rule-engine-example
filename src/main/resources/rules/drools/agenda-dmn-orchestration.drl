@@ -1,0 +1,116 @@
+package rules.drools;
+
+import com.example.ruleengine.model.DynamicEvaluationRequest;
+import com.example.ruleengine.model.DmnDecisionFact;
+import com.example.ruleengine.service.DynamicDmnService;
+
+global com.example.ruleengine.service.DynamicDmnService dynamicDmnService;
+
+// ==============================================================================
+// AGENDA GROUP: dynamic-dmn-runner
+// A generic orchestrator that targets any registered DMN model specified
+// in the evaluation request.
+// ==============================================================================
+
+rule "Evaluate Targeted DMN via Generic Agenda"
+    agenda-group "dynamic-dmn-runner"
+    salience 100
+    no-loop true
+    when
+        $req: DynamicEvaluationRequest( targetModelId != null, executed == false )
+    then
+        // Invoke the DynamicDmnService to evaluate the specified DMN model!
+        DmnDecisionFact decision = dynamicDmnService.evaluateToFact($req.getTargetModelId(), $req.getInputs());
+        insert(decision);
+        $req.setExecuted(true);
+        $req.setDecisionFact(decision);
+        $req.addTrace("Invoked DMN model '" + $req.getTargetModelId() + "' via Drools rule service call");
+        update($req);
+end
+
+rule "Audit Dynamic DMN Execution"
+    agenda-group "dynamic-dmn-runner"
+    salience -50
+    when
+        $req: DynamicEvaluationRequest( executed == true )
+        $fact: DmnDecisionFact()
+    then
+        $req.addTrace("AgendaGroup 'dynamic-dmn-runner' completed for model: " + $fact.getModelId());
+end
+
+// ==============================================================================
+// AGENDA GROUP: loan-approval-orchestration
+// Phased orchestration:
+// Phase 1: Evaluates loan eligibility DMN table.
+// Phase 2: If credit score >= 800, Drools applies an interest rate concession override!
+// ==============================================================================
+
+rule "Execute Loan Eligibility DMN in Agenda"
+    agenda-group "loan-approval-orchestration"
+    salience 100
+    no-loop true
+    when
+        $req: DynamicEvaluationRequest( executed == false )
+    then
+        String targetModel = $req.getTargetModelId() != null ? $req.getTargetModelId() : "loan-eligibility";
+        DmnDecisionFact decision = dynamicDmnService.evaluateToFact(targetModel, $req.getInputs());
+        insert(decision);
+        $req.setExecuted(true);
+        $req.setDecisionFact(decision);
+        $req.addTrace("Step 1: Evaluated loan DMN model '" + targetModel + "'");
+        update($req);
+end
+
+rule "High Credit Score Prime Rate Override"
+    agenda-group "loan-approval-orchestration"
+    salience 50
+    when
+        $req: DynamicEvaluationRequest( executed == true )
+        $decision: DmnDecisionFact( hasErrors == false )
+        eval( $req.getInputs().containsKey("creditScore") &&
+              ((Number)$req.getInputs().get("creditScore")).intValue() >= 800 )
+    then
+        $req.setOverrideApplied(true);
+        $req.addTrace("Step 2 (Drools Override): Credit score >= 800 qualifies for -1.0% interest rate VIP concession");
+        $decision.addAuditTag("Drools VIP override applied: -1.0% interest rate concession");
+
+        // If rate was calculated, reduce by 1.0%
+        Object currentRate = $decision.getValue("interestRate");
+        if (currentRate instanceof Number) {
+            double newRate = Math.max(1.0, ((Number) currentRate).doubleValue() - 1.0);
+            $decision.putValue("interestRate", newRate);
+            $decision.putValue("vipOverrideApplied", true);
+        }
+end
+
+// ==============================================================================
+// AGENDA GROUP: retail-pricing-orchestration
+// Evaluates any registered retail pricing DMN and enriches with loyalty vouchers.
+// ==============================================================================
+
+rule "Execute Retail Pricing DMN in Agenda"
+    agenda-group "retail-pricing-orchestration"
+    salience 100
+    no-loop true
+    when
+        $req: DynamicEvaluationRequest( executed == false )
+    then
+        DmnDecisionFact decision = dynamicDmnService.evaluateToFact($req.getTargetModelId(), $req.getInputs());
+        insert(decision);
+        $req.setExecuted(true);
+        $req.setDecisionFact(decision);
+        $req.addTrace("Step 1: Evaluated retail DMN model '" + $req.getTargetModelId() + "'");
+        update($req);
+end
+
+rule "Holiday Loyalty Voucher Enrichment"
+    agenda-group "retail-pricing-orchestration"
+    salience 40
+    when
+        $req: DynamicEvaluationRequest( executed == true )
+        $decision: DmnDecisionFact( hasErrors == false )
+    then
+        $decision.putValue("seasonalBonusVoucher", "$25 Holiday Gift Card");
+        $decision.addAuditTag("Drools Rule: Awarded $25 Holiday Gift Card");
+        $req.addTrace("Step 2 (Drools Enrichment): Attached $25 seasonal loyalty voucher to decision");
+end

@@ -1,0 +1,94 @@
+### ==============================================================================
+### DroolsStatelessController: Order Discount & Loyalty Points
+### Demonstrates: StatelessKieSession, Salience, Activation Groups
+### ==============================================================================
+
+@baseUrl = http://localhost:8080
+
+### 1. Platinum Tier VIP Customer (25% Discount + Free Shipping + 2x Points)
+POST {{baseUrl}}/api/drools/stateless/discount
+Content-Type: application/json
+Accept: application/json
+
+{
+  "orderId": "ORD-1001",
+  "orderAmount": 250.0,
+  "customer": {
+    "id": "CUST-001",
+    "name": "Alice Cooper",
+    "loyaltyTier": "PLATINUM",
+    "loyaltyPoints": 420
+  }
+}
+
+###
+
+### 2. Gold Tier Customer (15% Discount + Free Shipping)
+POST {{baseUrl}}/api/drools/stateless/discount
+Content-Type: application/json
+Accept: application/json
+
+{
+  "orderId": "ORD-1002",
+  "orderAmount": 150.0,
+  "customer": {
+    "id": "CUST-002",
+    "name": "Bob Marley",
+    "loyaltyTier": "GOLD",
+    "loyaltyPoints": 150
+  }
+}
+
+###
+
+### 3. Silver Tier Customer (10% Discount)
+POST {{baseUrl}}/api/drools/stateless/discount
+Content-Type: application/json
+Accept: application/json
+
+{
+  "orderId": "ORD-1003",
+  "orderAmount": 80.0,
+  "customer": {
+    "id": "CUST-003",
+    "name": "Charlie Chaplin",
+    "loyaltyTier": "SILVER",
+    "loyaltyPoints": 50
+  }
+}
+
+###
+
+### 4. Regular Customer Bulk Purchase (5% Discount for >= $150)
+POST {{baseUrl}}/api/drools/stateless/discount
+Content-Type: application/json
+Accept: application/json
+
+{
+  "orderId": "ORD-1004",
+  "orderAmount": 160.0,
+  "customer": {
+    "id": "CUST-004",
+    "name": "David Bowie",
+    "loyaltyTier": "REGULAR",
+    "loyaltyPoints": 10
+  }
+}
+
+###
+
+### 5. Regular Customer Under Threshold (Fallback Base Loyalty Points Only)
+POST {{baseUrl}}/api/drools/stateless/discount
+Content-Type: application/json
+Accept: application/json
+
+{
+  "orderId": "ORD-1005",
+  "orderAmount": 45.0,
+  "customer": {
+    "id": "CUST-005",
+    "name": "Emma Watson",
+    "loyaltyTier": "REGULAR",
+    "loyaltyPoints": 5
+  }
+}

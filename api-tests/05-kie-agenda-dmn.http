@@ -1,0 +1,95 @@
+### ==============================================================================
+### AgendaDmnOrchestrationController: KieSession Targeting DMN via Agenda Group
+### Demonstrates:
+### 1. Programmatic targeting via kieSession.getAgenda().getAgendaGroup(name).setFocus()
+### 2. Drools rule invoking a Spring service function via Drools 'global'
+### 3. Bridging DMN decision into Working Memory as DmnDecisionFact
+### 4. Drools rule overrides & enrichments on top of DMN outcomes
+### ==============================================================================
+
+@baseUrl = http://localhost:8080
+
+### 1. List Available Agenda Groups & Capabilities
+GET {{baseUrl}}/api/orchestration/agenda-groups
+Accept: application/json
+
+###
+
+### 2. Generic Orchestrator: Target Any Registered DMN via 'dynamic-dmn-runner'
+# Evaluates 'insurance-pricing' DMN inside the targeted agenda group
+POST {{baseUrl}}/api/orchestration/agenda-dmn/evaluate
+Content-Type: application/json
+Accept: application/json
+
+{
+  "agendaGroup": "dynamic-dmn-runner",
+  "targetModelId": "insurance-pricing",
+  "inputs": {
+    "driverAge": 32,
+    "accidentCount": 0,
+    "vehicleType": "SEDAN"
+  }
+}
+
+###
+
+### 3. Loan Orchestration: High-Credit Score VIP Override (-1.0% Rate Concession)
+# Agenda group 'loan-approval-orchestration' runs 'loan-eligibility' DMN (Prime rate = 6.5%).
+# Drools rule 'High Credit Score Prime Rate Override' checks creditScore >= 800
+# and automatically reduces interest rate to 5.5%!
+POST {{baseUrl}}/api/orchestration/agenda-dmn/evaluate
+Content-Type: application/json
+Accept: application/json
+
+{
+  "agendaGroup": "loan-approval-orchestration",
+  "targetModelId": "loan-eligibility",
+  "inputs": {
+    "applicantId": "VIP-999",
+    "applicantName": "Bruce Wayne",
+    "age": 36,
+    "monthlyIncome": 120000.0,
+    "creditScore": 820,
+    "requestedAmount": 300000.0
+  }
+}
+
+###
+
+### 4. Loan Orchestration: Standard Prime (Credit Score < 800, No Rate Override)
+# Credit score 760 (< 800) -> DMN rate 6.5% stays unchanged.
+POST {{baseUrl}}/api/orchestration/agenda-dmn/evaluate
+Content-Type: application/json
+Accept: application/json
+
+{
+  "agendaGroup": "loan-approval-orchestration",
+  "targetModelId": "loan-eligibility",
+  "inputs": {
+    "applicantId": "STD-500",
+    "applicantName": "Clark Kent",
+    "age": 32,
+    "monthlyIncome": 70000.0,
+    "creditScore": 760,
+    "requestedAmount": 150000.0
+  }
+}
+
+###
+
+### 5. Retail Orchestration: Evaluates Pricing & Attaches $25 Seasonal Loyalty Voucher
+# Evaluates retail DMN inside 'retail-pricing-orchestration'
+# and Drools automatically attaches a $25 Holiday Gift Card to the final decision!
+POST {{baseUrl}}/api/orchestration/agenda-dmn/evaluate
+Content-Type: application/json
+Accept: application/json
+
+{
+  "agendaGroup": "retail-pricing-orchestration",
+  "targetModelId": "insurance-pricing",
+  "inputs": {
+    "driverAge": 28,
+    "accidentCount": 0,
+    "vehicleType": "SUV"
+  }
+}

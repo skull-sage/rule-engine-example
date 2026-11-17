@@ -1,0 +1,81 @@
+### ==============================================================================
+### DynamicDmnController: Dynamic DMN Registration & Evaluation
+### For Business People exporting Decision Tables from Excel / DMN Visual Tools
+### ==============================================================================
+
+@baseUrl = http://localhost:8080
+
+### 1. List All Currently Registered DMN Models
+GET {{baseUrl}}/api/dmn/dynamic
+Accept: application/json
+
+###
+
+### 2. Register a New DMN Model via JSON (Exported Decision Table)
+# This registers the "retail-tier-discount" model compiled on the fly at runtime!
+POST {{baseUrl}}/api/dmn/dynamic
+Content-Type: application/json
+Accept: application/json
+
+{
+  "modelId": "retail-tier-discount",
+  "description": "Retail loyalty discount table exported from business spreadsheet",
+  "dmnXml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"https://www.omg.org/spec/DMN/20211108/MODEL/\"\n             id=\"_retail_discount_definitions\"\n             name=\"RetailTierDiscount\"\n             namespace=\"https://example.com/dmn/retail-tier-discount\">\n\n  <itemDefinition id=\"_it_tier\" name=\"tCustomerTier\">\n    <typeRef>string</typeRef>\n  </itemDefinition>\n  <itemDefinition id=\"_it_amount\" name=\"tCartAmount\">\n    <typeRef>number</typeRef>\n  </itemDefinition>\n\n  <itemDefinition id=\"_it_out_decision\" name=\"tRetailDiscountDecision\">\n    <itemComponent id=\"_it_comp_discount\" name=\"discountPercent\">\n      <typeRef>number</typeRef>\n    </itemComponent>\n    <itemComponent id=\"_it_comp_points\" name=\"rewardPoints\">\n      <typeRef>number</typeRef>\n    </itemComponent>\n    <itemComponent id=\"_it_comp_gift\" name=\"freeGiftEligible\">\n      <typeRef>boolean</typeRef>\n    </itemComponent>\n  </itemDefinition>\n\n  <inputData id=\"_in_tier\" name=\"customerTier\">\n    <variable id=\"_v_tier\" name=\"customerTier\" typeRef=\"tCustomerTier\"/>\n  </inputData>\n  <inputData id=\"_in_amount\" name=\"cartAmount\">\n    <variable id=\"_v_amount\" name=\"cartAmount\" typeRef=\"tCartAmount\"/>\n  </inputData>\n\n  <decision id=\"_dec_retail_discount\" name=\"Retail Tier Discount Decision\">\n    <variable id=\"_v_retail_discount\" name=\"Retail Tier Discount Decision\" typeRef=\"tRetailDiscountDecision\"/>\n    <informationRequirement id=\"_ir_t\"><requiredInput href=\"#_in_tier\"/></informationRequirement>\n    <informationRequirement id=\"_ir_a\"><requiredInput href=\"#_in_amount\"/></informationRequirement>\n\n    <decisionTable id=\"_dt_retail\" hitPolicy=\"FIRST\" typeRef=\"tRetailDiscountDecision\">\n      <input id=\"_in_1\" label=\"Customer Tier\"><inputExpression id=\"_ie_1\" typeRef=\"string\"><text>customerTier</text></inputExpression></input>\n      <input id=\"_in_2\" label=\"Cart Spend Amount\"><inputExpression id=\"_ie_2\" typeRef=\"number\"><text>cartAmount</text></inputExpression></input>\n      <output id=\"_out_d\" name=\"discountPercent\" typeRef=\"number\"/>\n      <output id=\"_out_p\" name=\"rewardPoints\" typeRef=\"number\"/>\n      <output id=\"_out_g\" name=\"freeGiftEligible\" typeRef=\"boolean\"/>\n\n      <rule id=\"_r1\">\n        <description>VIP Super Spender</description>\n        <inputEntry id=\"_r1_1\"><text>\"VIP\"</text></inputEntry>\n        <inputEntry id=\"_r1_2\"><text>&gt;= 200</text></inputEntry>\n        <outputEntry id=\"_r1_o1\"><text>20.0</text></outputEntry>\n        <outputEntry id=\"_r1_o2\"><text>500</text></outputEntry>\n        <outputEntry id=\"_r1_o3\"><text>true</text></outputEntry>\n      </rule>\n\n      <rule id=\"_r2\">\n        <description>Gold Tier Preferred</description>\n        <inputEntry id=\"_r2_1\"><text>\"GOLD\"</text></inputEntry>\n        <inputEntry id=\"_r2_2\"><text>&gt;= 100</text></inputEntry>\n        <outputEntry id=\"_r2_o1\"><text>15.0</text></outputEntry>\n        <outputEntry id=\"_r2_o2\"><text>250</text></outputEntry>\n        <outputEntry id=\"_r2_o3\"><text>false</text></outputEntry>\n      </rule>\n\n      <rule id=\"_r3\">\n        <description>Base Retail Policy</description>\n        <inputEntry id=\"_r3_1\"><text>-</text></inputEntry>\n        <inputEntry id=\"_r3_2\"><text>-</text></inputEntry>\n        <outputEntry id=\"_r3_o1\"><text>5.0</text></outputEntry>\n        <outputEntry id=\"_r3_o2\"><text>25</text></outputEntry>\n        <outputEntry id=\"_r3_o3\"><text>false</text></outputEntry>\n      </rule>\n    </decisionTable>\n  </decision>\n</definitions>"
+}
+
+###
+
+### 3. Inspect Registered Model Metadata
+GET {{baseUrl}}/api/dmn/dynamic/retail-tier-discount
+Accept: application/json
+
+###
+
+### 4. Directly Evaluate the Dynamically Registered Model: VIP Customer
+POST {{baseUrl}}/api/dmn/dynamic/retail-tier-discount/evaluate
+Content-Type: application/json
+Accept: application/json
+
+{
+  "customerTier": "VIP",
+  "cartAmount": 350.0
+}
+
+###
+
+### 5. Directly Evaluate the Dynamically Registered Model: Gold Customer
+POST {{baseUrl}}/api/dmn/dynamic/retail-tier-discount/evaluate
+Content-Type: application/json
+Accept: application/json
+
+{
+  "customerTier": "GOLD",
+  "cartAmount": 120.0
+}
+
+###
+
+### 6. Upload a .dmn File Directly (Multipart Form-Data)
+POST {{baseUrl}}/api/dmn/dynamic/upload
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="modelId"
+
+retail-tier-discount-uploaded
+--WebAppBoundary
+Content-Disposition: form-data; name="description"
+
+Uploaded spreadsheet decision table
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="retail-tier-discount.dmn"
+Content-Type: application/xml
+
+< ./samples/retail-tier-discount.dmn
+--WebAppBoundary--
+
+###
+
+### 7. View Raw DMN XML
+GET {{baseUrl}}/api/dmn/dynamic/retail-tier-discount/xml
+Accept: application/xml

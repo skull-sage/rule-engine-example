@@ -31,4 +31,6 @@ Thumbs.db
 # Logs & temp
 *.log
 *.tmp
+*.pid
+.rule-engine.pid
 

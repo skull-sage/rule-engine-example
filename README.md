@@ -120,11 +120,32 @@ rule-engine-example/
 ### Prerequisites
 * **JDK 21 or 25**
 
+### Running the Service with Convenience Scripts
+We provide dedicated management scripts in the project root:
+
 ```bash
-# Build and run tests
+# Start service in the background (default port 8080)
+./run-rule-engine
+
+# Start service on a custom port
+./run-rule-engine --port 9090
+
+# Start in foreground
+./run-rule-engine --foreground
+
+# Stop the running service
+./stop-rule-engine
+
+# Stop service on a custom port
+./stop-rule-engine --port 9090
+```
+
+### Alternative: Gradle Direct Execution
+```bash
+# Run all automated tests
 ./gradlew test
 
-# Start the application
+# Start via Gradle bootRun
 ./gradlew bootRun
 ```
 
